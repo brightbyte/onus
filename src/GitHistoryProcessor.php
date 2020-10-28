@@ -20,6 +20,7 @@ class GitHistoryProcessor {
 	private $filter = null;
 	private $batchSize = 1000;
 	private $branch = 'master';
+	private $path = null;
 
 	/** @var DateTime|null */
 	private $startTime = null;
@@ -29,6 +30,13 @@ class GitHistoryProcessor {
 
 	public function __construct( $dir ) {
 		$this->repository = new Repository( $dir );
+	}
+
+	/**
+	 * @param string $path
+	 */
+	public function setPath( string $path ): void {
+		$this->path = $path;
 	}
 
 	/**
@@ -78,16 +86,19 @@ class GitHistoryProcessor {
 				if ( !isset( $files[$file] ) ) {
 					$files[$file] = [
 						'File' => $file,
-						'Commits' => [],
-						'Tickets' => [],
 						'TicketCount' => 0,
+						'CommitCount' => 0,
+						'Tickets' => [],
+						'Commits' => [],
 					];
 				}
 
 				// don't list all files on all files
 				unset( $cmtInfo['files'] );
 
-				$files[$file]['Commits'][] = $cmtInfo;
+				$files[ $file ]['Commits'][] = $cmtInfo;
+				$files[ $file ]['CommitCount']++;
+
 				$files[ $file ]['Tickets'] =
 					array_unique( array_merge( $cmtInfo['bugs'], $files[ $file ]['Tickets'] ) );
 				$files[ $file ]['TicketCount'] = count( $files[ $file ]['Tickets'] );
@@ -95,7 +106,7 @@ class GitHistoryProcessor {
 		}
 
 		uasort( $files, function( $a, $b ) {
-			return $b['TicketCount'] <=> $a['TicketCount'];
+			return $b['CommitCount'] <=> $a['CommitCount'];
 		} );
 
 		return $files;
@@ -106,7 +117,7 @@ class GitHistoryProcessor {
 	 */
 	public function listCommits(): array {
 		$commits = [];
-		$log = $this->repository->getLog( $this->branch );
+		$log = $this->repository->getLog( $this->branch, $this->path ? [ $this->path ] : null );
 		$log->setLimit( $this->batchSize );
 
 		$offset = 0;
@@ -159,7 +170,16 @@ class GitHistoryProcessor {
 
 			$info['files'] = [];
 			foreach ( $commit->getDiff()->getFiles() as $file ) {
-				$info['files'][] = $file->getName();
+				$name = $file->getName();
+
+				// only include files that match the path prefix
+				if ( !$this->path || substr( $name, 0, strlen( $this->path ) ) === $this->path ) {
+					$info['files'][] = $name;
+				}
+			}
+
+			if ( !$info['files'] ) {
+				continue;
 			}
 
 			$commits[] = $info;

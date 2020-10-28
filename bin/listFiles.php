@@ -13,7 +13,9 @@ class ListFiles {
 		$options = getopt(
 			'', [
 				'dir:',
-				'input:',
+				'start-date:',
+				'path:',
+				'tasks:',
 				'output:'
 			],
 			$optind );
@@ -23,15 +25,19 @@ class ListFiles {
 			exit( 1 );
 		}
 		if ( !file_exists( $options['dir'] ) ) {
-			echo "git directory \"{$options['dir']}\"not found\n";
+			echo "git directory \"{$options['dir']}\" not found\n";
 			exit( 1 );
 		}
-		if ( !isset( $options['input'] ) ) {
-			echo "--input is required\n";
+		if ( !isset( $options['start-date'] ) ) {
+			echo "--start-date is required\n";
 			exit( 1 );
 		}
-		if ( !file_exists( $options['input'] ) ) {
-			echo "input file \"{$options['input']}\"not found\n";
+		if ( isset( $options['tasks'] ) && !file_exists( $options['tasks'] ) ) {
+			echo "tasks file \"{$options['tasks']}\" not found\n";
+			exit( 1 );
+		}
+		if ( isset( $options['path'] ) && !file_exists( $options['dir'] . '/' . $options['path'] ) ) {
+			echo "path \"{$options['dir']}/{$options['path']}\" not found\n";
 			exit( 1 );
 		}
 		$outputFile = fopen( $options['output'], 'w' );
@@ -40,18 +46,25 @@ class ListFiles {
 			exit( 1 );
 		}
 
-		$tasks = array_keys( json_decode( file_get_contents( $options['input'] ), true ) );
-		array_walk( $tasks, function ( &$value, $key ) {
-			$value = 'T' . $value;
-		} );
-
 		$processor = new GitHistoryProcessor( $options['dir'] );
-		$processor->setFilter( $tasks );
-		$processor->setStartTime( new DateTime( '2020-09-01' ) );
+		$processor->setStartTime( new DateTime( $options['start-date'] ) );
 
 		$processor->setProgressCallback( function () {
 			print '.';
 		} );
+
+		if ( isset( $options['tasks'] ) ) {
+			$tasks = array_keys( json_decode( file_get_contents( $options['tasks'] ), true ) );
+			array_walk( $tasks, function ( &$value, $key ) {
+				$value = 'T' . $value;
+			} );
+			$processor->setFilter( $tasks );
+			print "Filtering by " . count( $tasks ) . " tasks.\n";
+		}
+
+		if ( isset( $options['path'] ) ) {
+			$processor->setPath( $options['path'] );
+		}
 
 		print "Scanning...";
 		$files = $processor->getActivityByFile();
@@ -64,6 +77,6 @@ class ListFiles {
 			) .
 			"\n"
 		);
-		echo "\nFound " . count( $files ) . " commits.\n";
+		echo "\nFound activity on " . count( $files ) . " files.\n";
 	}
 }
