@@ -21,25 +21,31 @@ require_once __DIR__ . '/../arcanist/src/__phutil_library_init__.php';
 
 class QueryPhab {
 	private $projectNames;
+	private $priorities;
 	private $delay;
 	private $phabURL;
 	private $apiToken;
 	private $client;
 	private $phabTasks = [];
 
-	public function __construct( $projectNames, $delay, $phabURL, $apiToken ) {
+	public function __construct( $projectNames, $priorities, $delay, $phabURL, $apiToken ) {
 		$this->projectNames = $projectNames;
+		$this->priorities = $priorities;
 		$this->delay = $delay;
 		$this->phabURL = $phabURL;
 		$this->apiToken = $apiToken;
 	}
 
-	public function execute() {
+	public function executeQueries() {
 		$this->client = new ConduitClient( $this->phabURL );
 		$this->client->setConduitToken( $this->apiToken );
 		foreach ( $this->projectNames as $projectName ) {
 			$this->getPhabricatorTasksFromProject( $projectName );
 		}
+		foreach ( $this->priorities as $priority ) {
+			$this->getPhabricatorTasksForPriority( $priority );
+		}
+		return $this->phabTasks;
 	}
 
 	private function getPhabricatorTasksFromProject( $projectName ) {
@@ -64,6 +70,29 @@ class QueryPhab {
 		}
 	}
 
+
+	private function getPhabricatorTasksForPriority( $priority ) {
+		$params = [
+			'constraints' => [
+				'priorities' => [
+					$priority
+				],
+			],
+			'attachments' => [
+				'projects' => [
+					true
+				],
+				'columns' => [
+					true
+				]
+			]
+		];
+		$resultData = $this->callAPI( 'maniphest.search', $params );
+		foreach ( $resultData as $data ) {
+			$this->parseTask( $data );
+		}
+	}
+
 	private function callAPI( $api, $params ) {
 		$after = null;
 		$allData = [];
@@ -71,24 +100,16 @@ class QueryPhab {
 			if ( $this->delay > 0 ) {
 				sleep( $this->delay );
 			}
-			if ( $after === null ) {
-				$p = $params;
-			} else {
-				$a = [
-					"after" => $after
-				];
-				$p = $params + $a;
-			}
-
-			$results = $this->client->callMethodSynchronous( $api, $p );
-			$resultData = $results['data'];
-			echo count( $resultData ) . PHP_EOL;
-			foreach ( $resultData as $data ) {
+			$results = $this->client->callMethodSynchronous(
+			        $api,
+                    $after ? $params + [ 'after' => $after ] : $params
+            );
+			foreach ( $results['data'] as $data ) {
 				$allData[] = $data;
 			}
 			$after = $results['cursor']['after'];
-			echo $after . PHP_EOL;
-		} while ( $after !== null );
+			echo '.';
+		} while ( $after );
 		return $allData;
 	}
 
@@ -103,7 +124,7 @@ class QueryPhab {
 		$task['dateModified'] = $data['fields']['dateModified'];
 		$task['dateClosed'] = $data['fields']['dateClosed'];
 		$task['status'] = $data['fields']['status']['value'];
-		$task['color'] = $data['fields']['priority']['color'];
+		$task['priority'] = $data['fields']['priority']['value'];
 		$task['points'] = $data['fields']['points'];
 		$this->phabTasks[$taskID] = $task;
 	}
