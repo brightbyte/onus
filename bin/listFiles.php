@@ -12,10 +12,10 @@ class ListFiles {
 	public function main() {
 		$options = getopt(
 			'', [
-				'dir:',
-				'input:',
-				'output:'
-			],
+			'dir:',
+			'input:',
+			'output:'
+		],
 			$optind );
 
 		if ( !isset( $options['dir'] ) ) {
@@ -40,16 +40,16 @@ class ListFiles {
 			exit( 1 );
 		}
 
-		$tasks = array_keys(json_decode(file_get_contents($options['input']), true));
-		array_walk($tasks, function( &$value, $key ) {
+		$tasks = array_keys( json_decode( file_get_contents( $options['input'] ), true ) );
+		array_walk( $tasks, function ( &$value, $key ) {
 			$value = 'T' . $value;
-		});
+		} );
 
 		$processor = new GitHistoryProcessor( $options['dir'] );
 		$processor->setFilter( $tasks );
 		$processor->setStartTime( new DateTime( '2020-09-01' ) );
 
-		$processor->setProgressCallback( function() {
+		$processor->setProgressCallback( function () {
 			print '.';
 		} );
 
