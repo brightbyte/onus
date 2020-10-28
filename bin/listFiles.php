@@ -67,4 +67,3 @@ class ListFiles {
 		echo "\nFound " . count( $files ) . " commits.\n";
 	}
 }
-
