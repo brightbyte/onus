@@ -6,7 +6,7 @@ use DateTime;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-( new ListFiles( $argv[1] ) )->main();
+( new ListFiles() )->main();
 
 class ListFiles {
 	public function main() {
