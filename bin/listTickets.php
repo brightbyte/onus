@@ -21,20 +21,48 @@ class ListTickets {
 	}
 
 	public function main() {
+		$options = getopt(
+			'', [
+				'output:',
+				'start-date:'
+			],
+			$optind );
+
+		if ( !isset( $options['output'] ) ) {
+			echo "--output is required\n";
+			exit( 1 );
+		}
+		$outputFile = fopen( $options['output'], 'w' );
+		if ( !$outputFile ) {
+			echo "Unable to open output file \"{$options['output']}\"\n";
+			exit( 1 );
+		}
+		$startEpoch = null;
+		if ( isset( $options['start-date'] ) ) {
+			$startEpoch = strtotime( $options['start-date'] );
+			if ( $startEpoch === false ) {
+				echo "Invalid start date\n";
+				exit( 1 );
+			}
+		}
 		$queryEngine = new QueryPhab(
 			$this->getConfig( 'projectNames' ),
 			$this->getConfig( 'priorities' ),
 			$this->getConfig( 'delay' ),
 			$this->getConfig( 'phabURL' ),
-			$this->getConfig( 'apiToken' )
+			$this->getConfig( 'apiToken' ),
+			$startEpoch
 		);
 
 		$phabTasks = $queryEngine->executeQueries();
 
-		echo PHP_EOL;
-		foreach ($phabTasks as $id => $phabTask ) {
-			echo $id . ': ' . $phabTask['name'] . ' (' . $phabTask['priority'] . ')' . PHP_EOL;
-		}
-		echo 'Found ' . count( $phabTasks ) . ' tasks.';
+		fwrite( $outputFile,
+			json_encode(
+				$phabTasks,
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+			) .
+			"\n"
+		);
+		echo "\nFound " . count( $phabTasks ) . " tasks.\n";
 	}
 }
