@@ -4,6 +4,7 @@
   "license": "GPL-2.0-or-later",
   "prefer-stable": true,
   "require": {
+    "ext-json": "*",
     "gitonomy/gitlib": "^1.2",
     "symfony/console": "^5.1"
   },

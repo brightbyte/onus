@@ -29,13 +29,16 @@ class QueryPhab {
 	/** @var ConduitClient */
 	private $client;
 	private $phabTasks = [];
+	/** @var int|null */
+	private $startEpoch;
 
-	public function __construct( $projectNames, $priorities, $delay, $phabURL, $apiToken ) {
+	public function __construct( $projectNames, $priorities, $delay, $phabURL, $apiToken, $startEpoch ) {
 		$this->projectNames = $projectNames;
 		$this->priorities = $priorities;
 		$this->delay = $delay;
 		$this->phabURL = $phabURL;
 		$this->apiToken = $apiToken;
+		$this->startEpoch = $startEpoch;
 	}
 
 	public function executeQueries() {
@@ -66,6 +69,10 @@ class QueryPhab {
 				]
 			]
 		];
+		if ( $this->startEpoch !== null ) {
+			$params['constraints']['createdStart'] = $this->startEpoch;
+		}
+
 		$resultData = $this->callAPI( 'maniphest.search', $params );
 		foreach ( $resultData as $data ) {
 			$this->parseTask( $data );
@@ -89,6 +96,9 @@ class QueryPhab {
 				]
 			]
 		];
+		if ( $this->startEpoch !== null ) {
+			$params['constraints']['createdStart'] = $this->startEpoch;
+		}
 		$resultData = $this->callAPI( 'maniphest.search', $params );
 		foreach ( $resultData as $data ) {
 			$this->parseTask( $data );
