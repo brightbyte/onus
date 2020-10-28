@@ -126,7 +126,11 @@ class QueryPhab {
 	}
 
 	private function formatDate( $epoch ) {
-		return gmdate( 'Y-m-d\TH:i:s', $epoch );
+		if ( $epoch ) {
+			return gmdate( 'Y-m-d\TH:i:s', $epoch );
+		} else {
+			return null;
+		}
 	}
 
 	private function parseTask( $data ) {
