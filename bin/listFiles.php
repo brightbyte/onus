@@ -1,14 +1,22 @@
 <?php
 
-use Gitonomy\Git\Diff\File;
 use Wikimedia\Onus\GitHistoryProcessor;
 
 include( __DIR__ . '/../vendor/autoload.php' );
 
 $dir = $argv[1];
-$processor = new GitHistoryProcessor( $dir, [ 'T263592' ] );
+$processor = new GitHistoryProcessor( $dir );
+//$processor->setBatchSize( 3 );
+$processor->setFilter( [ 'T263592' ] );
+$processor->setStartTime( new DateTime( '2020-09-01' ) );
 
+$processor->setProgressCallback( function() {
+	print '.';
+} );
+
+print "Scanning...";
 $commits = $processor->listCommits();
+print " done.\n";
 
 foreach ( $commits as $cmtInfo ) {
 	print 'commit ' . $cmtInfo['hash']. "\n";

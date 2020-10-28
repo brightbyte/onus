@@ -2,7 +2,9 @@
 
 namespace Wikimedia\Onus;
 
+use DateTime;
 use Gitonomy\Git\Commit;
+use Gitonomy\Git\Log;
 use Gitonomy\Git\Repository;
 
 class GitHistoryProcessor {
@@ -16,11 +18,24 @@ class GitHistoryProcessor {
 	 * @var array
 	 */
 	private $filter = null;
-	private $limit = 10000;
+	private $batchSize = 1000;
 	private $branch = 'master';
+
+	/** @var DateTime|null */
+	private $startTime = null;
+
+	/** @var callable|null */
+	private $progressCallback;
 
 	public function __construct( $dir ) {
 		$this->repository = new Repository( $dir );
+	}
+
+	/**
+	 * @param DateTime $startTime
+	 */
+	public function setStartTime( DateTime $startTime ): void {
+		$this->startTime = $startTime;
 	}
 
 	/**
@@ -31,10 +46,10 @@ class GitHistoryProcessor {
 	}
 
 	/**
-	 * @param int $limit
+	 * @param int $batchSize
 	 */
-	public function setLimit( int $limit ): void {
-		$this->limit = $limit;
+	public function setBatchSize( int $batchSize ): void {
+		$this->batchSize = $batchSize;
 	}
 
 	/**
@@ -45,21 +60,55 @@ class GitHistoryProcessor {
 	}
 
 	/**
+	 * @param callable $progressCallback
+	 */
+	public function setProgressCallback( callable $progressCallback ): void {
+		$this->progressCallback = $progressCallback;
+	}
+
+	/**
 	 * @return Commit[]
 	 */
-	public function listCommits() {
+	public function listCommits(): array {
 		$commits = [];
 		$log = $this->repository->getLog( $this->branch );
-		$log->setLimit( $this->limit );
+		$log->setLimit( $this->batchSize );
+
+		$offset = 0;
+		$done = false;
+		while ( !$done ) {
+			$this->listCommitBatch( $log, $commits, $offset, $done );
+
+			if ( $this->progressCallback ) {
+				( $this->progressCallback )( $offset );
+			}
+		}
+
+		return $commits;
+	}
+
+	public function listCommitBatch( Log $log, array &$commits, &$offset, &$done ) {
+		$done = true; // will be set to false again if we find anything to iterate over
+
+		$log->setOffset( $offset );
 
 		/** @var Commit $commit */
 		foreach ( $log->getIterator() as $commit ) {
+			if (
+				$this->startTime &&
+				$commit->getCommitterDate()->getTimestamp() < $this->startTime->getTimestamp()
+			) {
+				$done = true;
+				break;
+			}
+
+			$done = false;
+			$offset++;
+
 			$info = $this->parseMessage( $commit->getMessage() );
 
 			$info['hash'] = $commit->getHash();
-			$info['date'] = $commit->getAuthorDate()->format( 'r' );
-
-			// TODO: report progress
+			$info['date'] = $commit->getCommitterDate()->format( 'r' );
 
 			if ( empty( $info['bugs'] ) ) {
 				continue;
@@ -79,10 +128,13 @@ class GitHistoryProcessor {
 
 			$commits[] = $info;
 		}
-
-		return $commits;
 	}
 
+	/**
+	 * @param string $message
+	 *
+	 * @return array
+	 */
 	private function parseMessage( string $message ) {
 		$info = [ 'message' => $message ];
 		$info['bugs'] = [];
