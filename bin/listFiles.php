@@ -1,31 +1,70 @@
 <?php
 
-use Wikimedia\Onus\GitHistoryProcessor;
+namespace Wikimedia\Onus;
 
-include( __DIR__ . '/../vendor/autoload.php' );
+use DateTime;
 
-$dir = $argv[1];
-$processor = new GitHistoryProcessor( $dir );
-//$processor->setBatchSize( 3 );
-$processor->setFilter( [ 'T263592' ] );
-$processor->setStartTime( new DateTime( '2020-09-01' ) );
+require __DIR__ . '/../vendor/autoload.php';
 
-$processor->setProgressCallback( function() {
-	print '.';
-} );
+( new ListFiles( $argv[1] ) )->main();
 
-print "Scanning...";
-$commits = $processor->listCommits();
-print " done.\n";
+class ListFiles {
+	public function main() {
+		$options = getopt(
+			'', [
+				'dir:',
+				'input:',
+				'output:'
+			],
+			$optind );
 
-foreach ( $commits as $cmtInfo ) {
-	print 'commit ' . $cmtInfo['hash']. "\n";
-	print 'Date: ' . $cmtInfo['date'] . "\n";
-	print 'Subject: ' . $cmtInfo['subject'] . "\n";
-	print 'Bugs: ' . implode( ', ', $cmtInfo['bugs'] ) . "\n";
-	print "\n";
-	foreach ( $cmtInfo['files'] as $file ) {
-		print $file . "\n";
+		if ( !isset( $options['dir'] ) ) {
+			echo "--dir is required\n";
+			exit( 1 );
+		}
+		if ( !file_exists( $options['dir'] ) ) {
+			echo "git directory \"{$options['git']}\"not found\n";
+			exit( 1 );
+		}
+		if ( !isset( $options['input'] ) ) {
+			echo "--input is required\n";
+			exit( 1 );
+		}
+		if ( !file_exists( $options['input'] ) ) {
+			echo "input file \"{$options['input']}\"not found\n";
+			exit( 1 );
+		}
+		$outputFile = fopen( $options['output'], 'w' );
+		if ( !$outputFile ) {
+			echo "Unable to open output file \"{$options['output']}\"\n";
+			exit( 1 );
+		}
+
+		// TODO: use this as input to GitHistoryProcessor once it uses that
+		$tasks = array_keys(json_decode(file_get_contents($options['input']), true));
+		array_walk($tasks, function( &$value, $key ) {
+			$value = 'T' . $value;
+		});
+
+		$processor = new GitHistoryProcessor( $options['dir'] );
+		$processor->setFilter( $tasks );
+		$processor->setStartTime( new DateTime( '2020-09-01' ) );
+
+		$processor->setProgressCallback( function() {
+			print '.';
+		} );
+
+		print "Scanning...";
+		$commits = $processor->listCommits();
+		print " done.\n";
+
+		fwrite( $outputFile,
+			json_encode(
+				$commits,
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+			) .
+			"\n"
+		);
+		echo "\nFound " . count( $commits ) . " commits.\n";
 	}
-	print "\n";
 }
