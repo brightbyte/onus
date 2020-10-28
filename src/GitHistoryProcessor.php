@@ -3,9 +3,7 @@
 namespace Wikimedia\Onus;
 
 use Gitonomy\Git\Commit;
-use Gitonomy\Git\Diff\File;
 use Gitonomy\Git\Repository;
-use Gitonomy\Git\Revision;
 
 class GitHistoryProcessor {
 
@@ -17,11 +15,33 @@ class GitHistoryProcessor {
 	/**
 	 * @var array
 	 */
-	private $filter;
+	private $filter = null;
+	private $limit = 10000;
+	private $branch = 'master';
 
-	public function __construct( $dir, $filter ) {
+	public function __construct( $dir ) {
 		$this->repository = new Repository( $dir );
+	}
+
+	/**
+	 * @param string[] $filter
+	 */
+	public function setFilter( array $filter ): void {
 		$this->filter = $filter;
+	}
+
+	/**
+	 * @param int $limit
+	 */
+	public function setLimit( int $limit ): void {
+		$this->limit = $limit;
+	}
+
+	/**
+	 * @param string $branch
+	 */
+	public function setBranch( string $branch ): void {
+		$this->branch = $branch;
 	}
 
 	/**
@@ -29,36 +49,66 @@ class GitHistoryProcessor {
 	 */
 	public function listCommits() {
 		$commits = [];
-		$log = $this->repository->getLog('master');
+		$log = $this->repository->getLog( $this->branch );
+		$log->setLimit( $this->limit );
 
-		/** @var Revision $revision */
-		foreach ( $log->getRevisions() as $revision ) {
-			$commits[] = $revision->getCommit();
+		/** @var Commit $commit */
+		foreach ( $log->getIterator() as $commit ) {
+			$info = $this->parseMessage( $commit->getMessage() );
+
+			$info['hash'] = $commit->getHash();
+			$info['date'] = $commit->getAuthorDate()->format( 'r' );
+
+			// TODO: report progress
+
+			if ( empty( $info['bugs'] ) ) {
+				continue;
+			}
+
+			if ( $this->filter ) {
+				$match = array_intersect( $this->filter, $info['bugs'] );
+				if ( !$match ) {
+					continue;
+				}
+			}
+
+			$info['files'] = [];
+			foreach ( $commit->getDiff()->getFiles() as $file ) {
+				$info['files'][] = $file->getName();
+			}
+
+			$commits[] = $info;
 		}
 
 		return $commits;
 	}
 
-}
+	private function parseMessage( string $message ) {
+		$info = [ 'message' => $message ];
+		$info['bugs'] = [];
+		$info['subject'] = null;
 
-include( __DIR__ . '/../vendor/autoload.php' );
+		$paragraphs = preg_split( '/(\r\n|\n|\r){2,}/', $message );
+		if ( !$paragraphs ) {
+			return $info;
+		}
 
-$dir = $argv[1];
-$processor = new GitHistoryProcessor( $dir, [] );
+		$info['subject'] = trim( $paragraphs[0] );
 
-$commits = $processor->listCommits();
+		if ( count( $paragraphs ) < 2 ) {
+			return $info;
+		}
 
-foreach ( $commits as $cmt ) {
-	print 'commit ' . $cmt->getHash() . "\n";
-	print 'Author: ' . $cmt->getAuthorName() . '<' . $cmt->getAuthorEmail() . '>' . "\n";
-	print 'Date: ' . $cmt->getAuthorDate()->format( 'r' ) . "\n";
-	print "\n";
-	print preg_replace( '/^/m', "\t", $cmt->getMessage() ) . "\n";
-	print "\n";
+		$footer = $paragraphs[ count( $paragraphs ) - 1 ];
+		$footerLines = preg_split( '/(\r\n|\n|\r)+/', $footer );
 
-	/** @var File $file */
-	foreach ( $cmt->getDiff()->getFiles() as $file ) {
-		print $file->getName() . "\n";
+		foreach ( $footerLines as $line ) {
+			if ( preg_match( '/^Bug: *(T\d+)/i', $line, $m ) ) {
+				$info['bugs'][] = $m[1];
+			}
+		}
+
+		return $info;
 	}
-	print "\n";
+
 }
