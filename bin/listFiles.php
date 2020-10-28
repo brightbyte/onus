@@ -40,7 +40,6 @@ class ListFiles {
 			exit( 1 );
 		}
 
-		// TODO: use this as input to GitHistoryProcessor once it uses that
 		$tasks = array_keys(json_decode(file_get_contents($options['input']), true));
 		array_walk($tasks, function( &$value, $key ) {
 			$value = 'T' . $value;
