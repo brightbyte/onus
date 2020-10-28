@@ -131,14 +131,15 @@ class GitHistoryProcessor {
 			$done = false;
 			$offset++;
 
+			if ( count( $commit->getParentHashes() ) > 1 ) {
+				// skip merge commits
+				continue;
+			}
+
 			$info = $this->parseMessage( $commit->getMessage() );
 
 			$info['hash'] = $commit->getHash();
 			$info['date'] = gmdate( 'Y-m-d\TH:i:s', $commit->getCommitterDate()->getTimestamp() );
-
-			if ( empty( $info['bugs'] ) ) {
-				continue;
-			}
 
 			if ( $this->filter ) {
 				$match = array_intersect( $this->filter, $info['bugs'] );
