@@ -12,10 +12,10 @@ class ListFiles {
 	public function main() {
 		$options = getopt(
 			'', [
-			'dir:',
-			'input:',
-			'output:'
-		],
+				'dir:',
+				'input:',
+				'output:'
+			],
 			$optind );
 
 		if ( !isset( $options['dir'] ) ) {
