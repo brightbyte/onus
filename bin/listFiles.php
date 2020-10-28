@@ -54,16 +54,16 @@ class ListFiles {
 		} );
 
 		print "Scanning...";
-		$commits = $processor->listCommits();
+		$files = $processor->getActivityByFile();
 		print " done.\n";
 
 		fwrite( $outputFile,
 			json_encode(
-				$commits,
+				$files,
 				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 			) .
 			"\n"
 		);
-		echo "\nFound " . count( $commits ) . " commits.\n";
+		echo "\nFound " . count( $files ) . " commits.\n";
 	}
 }
