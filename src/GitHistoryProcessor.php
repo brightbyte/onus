@@ -108,7 +108,7 @@ class GitHistoryProcessor {
 			$info = $this->parseMessage( $commit->getMessage() );
 
 			$info['hash'] = $commit->getHash();
-			$info['date'] = $commit->getCommitterDate()->format( 'r' );
+			$info['date'] = gmdate( 'Y-m-d\TH:i:s', $commit->getCommitterDate()->getTimestamp() );
 
 			if ( empty( $info['bugs'] ) ) {
 				continue;
