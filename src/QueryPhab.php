@@ -125,6 +125,10 @@ class QueryPhab {
 		return $allData;
 	}
 
+	private function formatDate( $epoch ) {
+		return gmdate( 'Y-m-d\TH:i:s', $epoch );
+	}
+
 	private function parseTask( $data ) {
 		$taskID = $data['id'];
 		if ( isset( $this->phabTasks[$taskID] ) ) {
@@ -132,9 +136,9 @@ class QueryPhab {
 		}
 		$task = [];
 		$task['name'] = $data['fields']['name'];
-		$task['dateCreated'] = $data['fields']['dateCreated'];
-		$task['dateModified'] = $data['fields']['dateModified'];
-		$task['dateClosed'] = $data['fields']['dateClosed'];
+		$task['dateCreated'] = $this->formatDate( $data['fields']['dateCreated'] );
+		$task['dateModified'] = $this->formatDate( $data['fields']['dateModified'] );
+		$task['dateClosed'] = $this->formatDate( $data['fields']['dateClosed'] );
 		$task['status'] = $data['fields']['status']['value'];
 		$task['priority'] = $data['fields']['priority']['value'];
 		$task['points'] = $data['fields']['points'];
