@@ -1,4 +1,3 @@
-#!/usr/bin/php
 <?php
 /**
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +16,9 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-require_once __DIR__ . '/../arcanist/src/__phutil_library_init__.php';
+namespace Wikimedia\Onus;
+
+use ConduitClient;
 
 class QueryPhab {
 	private $projectNames;
@@ -25,6 +26,7 @@ class QueryPhab {
 	private $delay;
 	private $phabURL;
 	private $apiToken;
+	/** @var ConduitClient */
 	private $client;
 	private $phabTasks = [];
 
