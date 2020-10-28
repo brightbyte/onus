@@ -67,7 +67,33 @@ class GitHistoryProcessor {
 	}
 
 	/**
-	 * @return Commit[]
+	 * @return array[]
+	 */
+	public function getActivityByFile(): array {
+		$files = [];
+		$commits = $this->listCommits();
+
+		foreach ( $commits as $cmtInfo ) {
+			foreach ( $cmtInfo['files'] as $file ) {
+				if ( !isset( $files[$file] ) ) {
+					$files[$file] = [
+						'File' => $file,
+						'Commits' => [],
+						'Tickets' => [],
+					];
+				}
+
+				$files[$file]['Commits'][] = $cmtInfo;
+				$files[ $file ]['Tickets'] =
+					array_unique( array_merge( $cmtInfo['bugs'], $files[ $file ]['Tickets'] ) );
+			}
+		}
+
+		return $files;
+	}
+
+	/**
+	 * @return array[]
 	 */
 	public function listCommits(): array {
 		$commits = [];

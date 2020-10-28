@@ -15,9 +15,12 @@ $processor->setProgressCallback( function() {
 } );
 
 print "Scanning...";
-$commits = $processor->listCommits();
+$files = $processor->getActivityByFile();
 print " done.\n";
 
+print json_encode( $files, JSON_PRETTY_PRINT );
+
+/*
 foreach ( $commits as $cmtInfo ) {
 	print 'commit ' . $cmtInfo['hash']. "\n";
 	print 'Date: ' . $cmtInfo['date'] . "\n";
@@ -29,3 +32,4 @@ foreach ( $commits as $cmtInfo ) {
 	}
 	print "\n";
 }
+*/
