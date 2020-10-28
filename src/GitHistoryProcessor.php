@@ -80,14 +80,23 @@ class GitHistoryProcessor {
 						'File' => $file,
 						'Commits' => [],
 						'Tickets' => [],
+						'TicketCount' => 0,
 					];
 				}
+
+				// don't list all files on all files
+				unset( $cmtInfo['files'] );
 
 				$files[$file]['Commits'][] = $cmtInfo;
 				$files[ $file ]['Tickets'] =
 					array_unique( array_merge( $cmtInfo['bugs'], $files[ $file ]['Tickets'] ) );
+				$files[ $file ]['TicketCount'] = count( $files[ $file ]['Tickets'] );
 			}
 		}
+
+		uasort( $files, function( $a, $b ) {
+			return $b['TicketCount'] <=> $a['TicketCount'];
+		} );
 
 		return $files;
 	}

@@ -7,8 +7,8 @@ include( __DIR__ . '/../vendor/autoload.php' );
 $dir = $argv[1];
 $processor = new GitHistoryProcessor( $dir );
 //$processor->setBatchSize( 3 );
-$processor->setFilter( [ 'T263592' ] );
-$processor->setStartTime( new DateTime( '2020-09-01' ) );
+// $processor->setFilter( [ 'T263592' ] );
+$processor->setStartTime( new DateTime( '2020-10-20' ) );
 
 $processor->setProgressCallback( function() {
 	print '.';
