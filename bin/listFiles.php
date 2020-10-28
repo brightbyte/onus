@@ -23,7 +23,7 @@ class ListFiles {
 			exit( 1 );
 		}
 		if ( !file_exists( $options['dir'] ) ) {
-			echo "git directory \"{$options['git']}\"not found\n";
+			echo "git directory \"{$options['dir']}\"not found\n";
 			exit( 1 );
 		}
 		if ( !isset( $options['input'] ) ) {
