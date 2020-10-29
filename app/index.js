@@ -25,15 +25,26 @@ var svg = d3.select("body").append("svg")
 // get the data
 d3.json("files.json").then(function(data) {
 
-  const arrayData = Object.values(data)
+  let arrayData = Object.values(data)
     .sort( (a, b) =>  b.TicketCount - a.TicketCount )
     .slice(0,20);
+  for ( const i in arrayData ) {
+    arrayData[i].LastCommit = d3.max(arrayData[i].Commits.map( function(c) { return c.date}));
+    arrayData[i].Tickets = Object.values(arrayData[i].Tickets).sort();
+  }
+  arrayData = arrayData.sort( (a, b) => b.LastCommit < a.LastCommit ? -1 : (
+    b.LastCommit > a.LastCommit ? 1 : 0 ) );
   
   // Scale the range of the data in the domains
   x.domain(arrayData.map(function(d) { return d.File; }));
   y.domain([0, d3.max(arrayData.map( function(d) { return d.TicketCount; }))]);
 
-  // append the rectangles for the bar chart
+  var tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+    // append the rectangles for the bar chart
   svg.selectAll(".bar")
       .data(arrayData)
     .enter().append("rect")
@@ -46,13 +57,25 @@ d3.json("files.json").then(function(data) {
         d3.select(this).transition()
              .duration('50')
              .attr('opacity', '.85');
-      })
+        var html = '<b>' + d.File + '</b><br/><i>Last Commit:</i> ' + d.LastCommit + '<br/>';
+        for (const ticket in d.Tickets) {
+          html += '<a href="https://phabricator.wikimedia.org/' +
+            d.Tickets[ticket] + '" target="_blank">' + d.Tickets[ticket] + '</a><br/>';
+        }
+        tooltip.html(html)
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px")
+          .transition()
+          .duration(200)
+          .style("opacity", 1);
+        })
       .on('mouseout', function (d, i) {
         d3.select(this).transition()
              .duration('50')
-             .attr('opacity', '1')
-      });
-
+             .attr('opacity', '1');
+        tooltip
+          .style("opacity", 0);
+      })
 
   // add the x Axis
   svg.append("g")
