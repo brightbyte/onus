@@ -1,4 +1,3 @@
-#!/usr/bin/php
 <?php
 /**
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +16,9 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-require_once __DIR__ . '/../arcanist/src/__phutil_library_init__.php';
+namespace Wikimedia\Onus;
+
+use ConduitClient;
 
 class QueryPhab {
 	private $projectNames;
@@ -25,15 +26,19 @@ class QueryPhab {
 	private $delay;
 	private $phabURL;
 	private $apiToken;
+	/** @var ConduitClient */
 	private $client;
 	private $phabTasks = [];
+	/** @var int|null */
+	private $startEpoch;
 
-	public function __construct( $projectNames, $priorities, $delay, $phabURL, $apiToken ) {
+	public function __construct( $projectNames, $priorities, $delay, $phabURL, $apiToken, $startEpoch ) {
 		$this->projectNames = $projectNames;
 		$this->priorities = $priorities;
 		$this->delay = $delay;
 		$this->phabURL = $phabURL;
 		$this->apiToken = $apiToken;
+		$this->startEpoch = $startEpoch;
 	}
 
 	public function executeQueries() {
@@ -64,6 +69,10 @@ class QueryPhab {
 				]
 			]
 		];
+		if ( $this->startEpoch !== null ) {
+			$params['constraints']['createdStart'] = $this->startEpoch;
+		}
+
 		$resultData = $this->callAPI( 'maniphest.search', $params );
 		foreach ( $resultData as $data ) {
 			$this->parseTask( $data );
@@ -87,6 +96,9 @@ class QueryPhab {
 				]
 			]
 		];
+		if ( $this->startEpoch !== null ) {
+			$params['constraints']['createdStart'] = $this->startEpoch;
+		}
 		$resultData = $this->callAPI( 'maniphest.search', $params );
 		foreach ( $resultData as $data ) {
 			$this->parseTask( $data );
@@ -113,6 +125,14 @@ class QueryPhab {
 		return $allData;
 	}
 
+	private function formatDate( $epoch ) {
+		if ( $epoch ) {
+			return gmdate( 'Y-m-d\TH:i:s', $epoch );
+		} else {
+			return null;
+		}
+	}
+
 	private function parseTask( $data ) {
 		$taskID = $data['id'];
 		if ( isset( $this->phabTasks[$taskID] ) ) {
@@ -120,9 +140,9 @@ class QueryPhab {
 		}
 		$task = [];
 		$task['name'] = $data['fields']['name'];
-		$task['dateCreated'] = $data['fields']['dateCreated'];
-		$task['dateModified'] = $data['fields']['dateModified'];
-		$task['dateClosed'] = $data['fields']['dateClosed'];
+		$task['dateCreated'] = $this->formatDate( $data['fields']['dateCreated'] );
+		$task['dateModified'] = $this->formatDate( $data['fields']['dateModified'] );
+		$task['dateClosed'] = $this->formatDate( $data['fields']['dateClosed'] );
 		$task['status'] = $data['fields']['status']['value'];
 		$task['priority'] = $data['fields']['priority']['value'];
 		$task['points'] = $data['fields']['points'];
