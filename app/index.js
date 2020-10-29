@@ -41,7 +41,18 @@ d3.json("files.json").then(function(data) {
       .attr("x", function(d) { return x(d.File); })
       .attr("width", x.bandwidth())
       .attr("y", function(d) { return y(d.TicketCount); })
-      .attr("height", function(d) { return height - y(d.TicketCount); });
+      .attr("height", function(d) { return height - y(d.TicketCount); })
+      .on('mouseover', function (d, i) {
+        d3.select(this).transition()
+             .duration('50')
+             .attr('opacity', '.85');
+      })
+      .on('mouseout', function (d, i) {
+        d3.select(this).transition()
+             .duration('50')
+             .attr('opacity', '1')
+      });
+
 
   // add the x Axis
   svg.append("g")
