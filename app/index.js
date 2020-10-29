@@ -44,6 +44,8 @@ d3.json("files.json").then(function(data) {
     .attr("class", "tooltip")
     .style("opacity", 0);
 
+    let clicked = null;
+
     // append the rectangles for the bar chart
   svg.selectAll(".bar")
       .data(arrayData)
@@ -53,28 +55,35 @@ d3.json("files.json").then(function(data) {
       .attr("width", x.bandwidth())
       .attr("y", function(d) { return y(d.TicketCount); })
       .attr("height", function(d) { return height - y(d.TicketCount); })
+      .on('click', function (d, i) {
+        if ( clicked == d ) {
+          tooltip
+            .style("opacity", 0);
+          clicked = null;
+        } else {
+          var html = '<b>' + d.File + '</b><br/><i>Last Commit:</i> ' + d.LastCommit + '<br/>';
+          for (const ticket in d.Tickets) {
+            html += '<a href="https://phabricator.wikimedia.org/' +
+              d.Tickets[ticket] + '" target="_blank">' + d.Tickets[ticket] + '</a><br/>';
+          }
+          tooltip.html(html)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px")
+            .transition()
+            .duration(200)
+            .style("opacity", 1);
+          clicked = d;
+        }
+       })
       .on('mouseover', function (d, i) {
         d3.select(this).transition()
              .duration('50')
              .attr('opacity', '.85');
-        var html = '<b>' + d.File + '</b><br/><i>Last Commit:</i> ' + d.LastCommit + '<br/>';
-        for (const ticket in d.Tickets) {
-          html += '<a href="https://phabricator.wikimedia.org/' +
-            d.Tickets[ticket] + '" target="_blank">' + d.Tickets[ticket] + '</a><br/>';
-        }
-        tooltip.html(html)
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px")
-          .transition()
-          .duration(200)
-          .style("opacity", 1);
-        })
+         })
       .on('mouseout', function (d, i) {
         d3.select(this).transition()
              .duration('50')
-             .attr('opacity', '1');
-        tooltip
-          .style("opacity", 0);
+             .attr('opacity', '1')
       })
 
   // add the x Axis
