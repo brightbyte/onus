@@ -25,9 +25,10 @@ var svg = d3.select("body").append("svg")
 // get the data
 d3.json("files.json").then(function(data) {
 
-  let arrayData = Object.values(data);
-  arrayData = arrayData.sort().slice(0, 20);
-
+  const arrayData = Object.values(data)
+    .sort( (a, b) =>  b.TicketCount - a.TicketCount )
+    .slice(0,20);
+  
   // Scale the range of the data in the domains
   x.domain(arrayData.map(function(d) { return d.File; }));
   y.domain([0, d3.max(arrayData.map( function(d) { return d.TicketCount; }))]);
